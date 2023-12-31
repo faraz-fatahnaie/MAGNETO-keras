@@ -1,0 +1,15 @@
+{
+  "seed": 0,
+  "dataset": {
+    "name": "KDD_CUP99",
+    "classification_mode": "binary",
+    "n_worker": 4,
+    "deepinsight": {"deepinsight": true, "Max_A_Size": 10, "Max_B_Size": 10, "Dynamic_Size": false, "Method": "tSNE",
+                   "LoadFromPickle": false, "mutual_info": true,
+                   "hyper_opt_evals": 50, "epoch": 2, "No_0_MI": false, "cut": null,
+                   "autoencoder": true, "ae_method": "MAGNETO",
+                   "enhanced_dataset": "None", "generate_class": 1, "generate_n_samples": 60000,
+                   "seed": 0
+    }
+  }
+}
