@@ -11,5 +11,10 @@
                    "enhanced_dataset": "None", "generate_class": 1, "generate_n_samples": 60000,
                    "seed": 0
     }
+  },
+  "autoencoder": {
+    "use_autoencoder": true,
+    "trainable": false,
+    "fine_tuning": false
   }
 }
