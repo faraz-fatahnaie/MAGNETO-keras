@@ -7,9 +7,7 @@ import numpy as np
 from hyperopt import hp, Trials, fmin, tpe, STATUS_OK
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.optimizers import Adam
-from sklearn import metrics
-from sklearn.metrics import confusion_matrix, balanced_accuracy_score, accuracy_score, precision_score, recall_score, \
-    f1_score
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import os
@@ -23,10 +21,6 @@ from Dataset2Image.main import deepinsight
 from keras.models import Model
 from keras.layers import Input, Dense, Conv2D, Dropout, Flatten
 
-# Set GPU device and disable eager execution
-# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-# physical_devices = tf.config.list_physical_devices('GPU')
-# tf.compat.v1.disable_eager_execution()
 print(tf.config.list_physical_devices('GPU'))
 
 set_seed(seed=0)
