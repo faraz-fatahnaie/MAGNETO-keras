@@ -300,7 +300,7 @@ def train_MAGNETO():
     fmin(hyperopt_fcn, hyperparameters_to_optimize,
          trials=trials,
          algo=tpe.suggest,
-         max_evals=30,
+         max_evals=50,
          rstate=np.random.default_rng(0))
     print('done')
 
