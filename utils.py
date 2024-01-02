@@ -48,8 +48,7 @@ def get_result(cm):
     P = tp / (tp + fp)
     R = tp / (tp + fn)
     F1 = 2 * ((P * R) / (P + R))
-    FAR = fn / (tn + fn)
-
+    FAR = fp / (tn + fp)
     return {"OA": OA, "P": P, "R": R, "F1": F1, "FAR": FAR}
 
 
@@ -188,13 +187,18 @@ if __name__ == "__main__":
     # df = pd.read_csv(df_path)
     # shuffle_dataframe(df)
 
-    TP = 715402
+    TP = 54577
 
-    FP = 7302
 
-    FN = 5273
+    FP = 1423
 
-    TN = 172023
+
+    FN = 16732
+
+
+    TN = 102609
+
 
     cm = [[TP, FP], [FN, TN]]
-    get_result(cm)
+    res = get_result(cm)
+    print(res)
