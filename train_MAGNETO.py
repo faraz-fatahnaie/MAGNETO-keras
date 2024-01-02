@@ -1,4 +1,6 @@
+import argparse
 import csv
+import gc
 import time
 
 import keras.layers
@@ -30,6 +32,10 @@ YGlobal = []
 
 XTestGlobal = []
 YTestGlobal = []
+
+result_path = str()
+load_previous_result = True
+continue_loading = True
 
 SavedParameters = []
 Mode = ""
@@ -156,52 +162,84 @@ def CNN2(images, y, params=None):
 def hyperopt_fcn(params):
     global SavedParameters
     global best_val_acc
+    global tid
 
-    print("start train")
-    train_start_time = time.time()
-    model, val = CNN2(XGlobal, YGlobal, params)
-    train_elapsed_time = time.time() - train_start_time
-    print("start predict")
-    test_start_time = time.time()
-    y_predicted = model.predict(XTestGlobal, verbose=0, workers=4)
-    test_elapsed_time = time.time() - test_start_time
+    global result_path
+    global load_previous_result
+    global continue_loading
 
-    y_predicted = np.argmax(y_predicted, axis=1)
-    YTestGlobal_temp = np.argmax(YTestGlobal, axis=1)
+    if (result_path is not None) and continue_loading:
+        result_table = pd.read_csv(result_path)
 
-    cm_test = confusion_matrix(YTestGlobal_temp, y_predicted)
-    results_test = get_result(cm_test)
+        tid += 1
+        selected_row = result_table[result_table['tid'] == tid]
+        print(selected_row)
+        loss_hp = selected_row['F1_val'].values[0]
+        loss_hp = -loss_hp
+        if tid == len(result_table):
+            continue_loading = False
 
-    SavedParameters.append(val)
-    SavedParameters[-1].update({
-        "test_time": int(test_elapsed_time),
-        "TP_test": cm_test[0][0],
-        "FP_test": cm_test[0][1],
-        "FN_test": cm_test[1][0],
-        "TN_test": cm_test[1][1],
-        "OA_test": results_test['OA'],
-        "P_test": results_test['P'],
-        "R_test": results_test['R'],
-        "F1_test": results_test['F1'],
-        "FAR_test": results_test['FAR'],
-    })
+        if load_previous_result:
+            best_val_acc = result_table['F1_val'].max()
 
-    # Save model
-    if SavedParameters[-1]["F1_val"] > best_val_acc:
-        print("new saved model:" + str(SavedParameters[-1]))
-        model.save(os.path.join(SAVE_PATH_, Name.replace(".csv", "_model.h5")))
-        best_val_acc = SavedParameters[-1]["F1_val"]
+            result_table = result_table.sort_values('F1_val', ascending=False)
+            SavedParameters = result_table.to_dict(orient='records')
+            with open((os.path.join(SAVE_PATH_, 'best_result.csv')), 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=SavedParameters[0].keys())
+                writer.writeheader()
+                writer.writerows(SavedParameters)
 
-    SavedParameters = sorted(SavedParameters, key=lambda i: i['F1_val'], reverse=True)
+            load_previous_result = False
 
-    try:
-        with open((os.path.join(SAVE_PATH_, 'best_result.csv')), 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=SavedParameters[0].keys())
-            writer.writeheader()
-            writer.writerows(SavedParameters)
-    except IOError:
-        print("I/O error")
-    return {'loss': -val["F1_val"], 'status': STATUS_OK}
+    else:
+        print("start train")
+        train_start_time = time.time()
+        model, result = CNN2(XGlobal, YGlobal, params)
+        train_elapsed_time = time.time() - train_start_time
+        print("start predict")
+        test_start_time = time.time()
+        y_predicted = model.predict(XTestGlobal, verbose=0, workers=4)
+        test_elapsed_time = time.time() - test_start_time
+
+        y_predicted = np.argmax(y_predicted, axis=1)
+        YTestGlobal_temp = np.argmax(YTestGlobal, axis=1)
+
+        cm_test = confusion_matrix(YTestGlobal_temp, y_predicted)
+        results_test = get_result(cm_test)
+
+        SavedParameters.append(result)
+        SavedParameters[-1].update({
+            "test_time": int(test_elapsed_time),
+            "TP_test": cm_test[0][0],
+            "FP_test": cm_test[0][1],
+            "FN_test": cm_test[1][0],
+            "TN_test": cm_test[1][1],
+            "OA_test": results_test['OA'],
+            "P_test": results_test['P'],
+            "R_test": results_test['R'],
+            "F1_test": results_test['F1'],
+            "FAR_test": results_test['FAR'],
+        })
+
+        # Save model
+        if SavedParameters[-1]["F1_val"] > best_val_acc:
+            print("new saved model:" + str(SavedParameters[-1]))
+            model.save(os.path.join(SAVE_PATH_, Name.replace(".csv", "_model.h5")))
+            best_val_acc = SavedParameters[-1]["F1_val"]
+
+        SavedParameters = sorted(SavedParameters, key=lambda i: i['F1_val'], reverse=True)
+
+        try:
+            with open((os.path.join(SAVE_PATH_, 'best_result.csv')), 'w', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=SavedParameters[0].keys())
+                writer.writeheader()
+                writer.writerows(SavedParameters)
+        except IOError:
+            print("I/O error")
+
+        loss_hp = -result["F1_val"]
+        gc.collect()
+    return {'loss': loss_hp, 'status': STATUS_OK}
 
 
 def train_MAGNETO():
@@ -300,4 +338,17 @@ def train_MAGNETO():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Description of your script')
+    # parser.add_argument('--dataset', type=str, default='UNSW_NB15', required=True,
+    #                     help='dataset name choose from: "UNSW", "KDD", "CICIDS"')
+    parser.add_argument('--result', type=str, required=False,
+                        help='path of hyper-parameter training result table .csv file')
+
+    args = parser.parse_args()
+
+    if args.result is not None:
+        result_path = args.result
+    else:
+        result_path = None
+
     train_MAGNETO()
